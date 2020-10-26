@@ -5,12 +5,12 @@
         <%= cond do %>
         <% tile.wall? -> %>
           <td class="tile wall" >
-        <% Enum.find(tile.heroes, fn hero -> hero.name == @name end) -> %>
-          <td class="tile my" >
-          <%= @name %>
         <% dead = Enum.find(tile.heroes, fn hero -> not hero.alive? end) -> %>
           <td class="tile dead" >
           <%= dead.name %>
+        <% Enum.find(tile.heroes, fn hero -> hero.name == @name end) -> %>
+          <td class="tile my" >
+          <%= @name %>
         <% Enum.any?(tile.heroes) -> %>
           <td class="tile empty" >
           <%=
