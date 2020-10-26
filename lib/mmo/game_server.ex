@@ -78,7 +78,7 @@ defmodule Mmo.GameServer do
     {:noreply, state}
   end
 
-  def handle_info({:revive, pid}, state = %{walkable_tiles: walkable_tiles}) do
+  def handle_info({:revive, pid}, %{walkable_tiles: walkable_tiles} = state) do
     tile = Enum.random(walkable_tiles)
     :ok = HeroServer.revive_hero(pid, tile)
     :ok = notify_clients(state)

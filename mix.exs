@@ -42,7 +42,8 @@ defmodule Mmo.MixProject do
       {:telemetry_poller, "~> 0.4"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:faker, "~> 0.16"}
+      {:faker, "~> 0.16"},
+      {:credo, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
