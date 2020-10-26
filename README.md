@@ -1,3 +1,5 @@
+![Elixir CI](https://github.com/tank-bohr/mmo/workflows/Elixir%20CI/badge.svg)
+
 # Mmo
 
 To start your Phoenix server:
