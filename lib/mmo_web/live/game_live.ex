@@ -2,11 +2,13 @@ defmodule MmoWeb.GameLive do
   use MmoWeb, :live_view
 
   alias Mmo.GameServer
+  alias Faker.Superhero
 
   require Logger
 
   @impl true
-  def mount(%{"name" => name}, _session, socket) do
+  def mount(params, _session, socket) do
+    name = params["name"] || Superhero.name
     :ok = GameServer.connect(name)
     {:ok, assign(socket, name: name, world: [])}
   end
