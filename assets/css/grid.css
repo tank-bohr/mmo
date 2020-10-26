@@ -1,0 +1,32 @@
+table {
+  border-collapse: collapse;
+}
+
+table, td {
+  border: 1px solid black;
+}
+
+td {
+  text-align: center;
+}
+
+.tile {
+  width: 70px;
+  height: 70px
+}
+
+.my {
+  background-color: green
+}
+
+.dead {
+  background-color: red
+}
+
+.empty {
+  background-color: white
+}
+
+.wall {
+  background-color: grey
+}

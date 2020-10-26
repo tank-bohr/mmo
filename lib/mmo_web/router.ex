@@ -17,7 +17,8 @@ defmodule MmoWeb.Router do
   scope "/", MmoWeb do
     pipe_through :browser
 
-    live "/", PageLive, :index
+    resources "/", WelcomeController, only: [:index, :create]
+    live "/game", GameLive, :index
   end
 
   # Other scopes may use custom stacks.

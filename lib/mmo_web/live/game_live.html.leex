@@ -1,0 +1,21 @@
+<table phx-window-keyup="action" phx-throttle="50">
+  <%= for row <- @world do %>
+    <tr>
+      <%= for tile <- row do %>
+        <%= cond do %>
+        <% tile.wall? -> %>
+          <td class="tile wall" >
+        <% Enum.member?(tile.heroes, @name) -> %>
+          <td class="tile my" >
+          <%= @name %>
+        <% Enum.any?(tile.heroes) -> %>
+          <td class="tile empty" >
+          <%= List.first(tile.heroes) %>
+        <% true -> %>
+          <td class="tile empty" >
+        <% end %>
+      </td>
+      <% end %>
+    </tr>
+  <% end %>
+</table>
