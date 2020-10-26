@@ -5,6 +5,8 @@ defmodule Mmo.HeroServer do
   alias Mmo.HeroesRegistry
   alias Mmo.HeroesSupervisor
 
+  require Logger
+
   def create(hero) do
     DynamicSupervisor.start_child(HeroesSupervisor, {__MODULE__, hero})
   end
@@ -42,11 +44,10 @@ defmodule Mmo.HeroServer do
   end
 
   def handle_call({:revive_hero, tile}, _from, %{hero: %Hero{name: name}} = state) do
-    {_, hero} =
+    {hero, _} =
       Registry.update_value(HeroesRegistry, name, fn prev ->
         %Hero{prev | alive?: true, tile: tile}
       end)
-
     {:reply, :ok, %{state | hero: hero}}
   end
 
@@ -55,7 +56,7 @@ defmodule Mmo.HeroServer do
   end
 
   def handle_call({:update_tile, tile}, _from, %{hero: %Hero{name: name}} = state) do
-    {_, hero} =
+    {hero, _} =
       Registry.update_value(HeroesRegistry, name, fn prev ->
         %Hero{prev | tile: tile}
       end)
@@ -64,7 +65,7 @@ defmodule Mmo.HeroServer do
   end
 
   def handle_call(:kill_hero, _from, %{hero: %Hero{name: name}} = state) do
-    {_, hero} =
+    {hero, _} =
       Registry.update_value(HeroesRegistry, name, fn prev ->
         %Hero{prev | alive?: false}
       end)

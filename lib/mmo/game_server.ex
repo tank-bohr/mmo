@@ -55,7 +55,7 @@ defmodule Mmo.GameServer do
   @impl true
   def handle_call({:connect, name}, {client, _}, state) do
     {pid, _hero} = find_or_create_hero(name, state)
-    HeroServer.increase_counter(pid, client)
+    :ok = HeroServer.increase_counter(pid, client)
     {:reply, notify_clients(state), state}
   end
 
@@ -74,14 +74,14 @@ defmodule Mmo.GameServer do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
-    notify_clients(state)
+    :ok = notify_clients(state)
     {:noreply, state}
   end
 
   def handle_info({:revive, pid}, state = %{walkable_tiles: walkable_tiles}) do
     tile = Enum.random(walkable_tiles)
     :ok = HeroServer.revive_hero(pid, tile)
-    notify_clients(state)
+    :ok = notify_clients(state)
     {:noreply, state}
   end
 
@@ -140,8 +140,7 @@ defmodule Mmo.GameServer do
       }
     ])
     |> Enum.filter(fn {_pid, hero} -> attack_covers?(hero.tile, attacker.tile) end)
-    |> Enum.each(fn {pid, hero} ->
-      Logger.debug("Kill #{hero.name}")
+    |> Enum.each(fn {pid, _hero} ->
       :ok = HeroServer.kill_hero(pid)
       Process.send_after(self(), {:revive, pid}, :timer.seconds(5))
     end)
@@ -192,6 +191,5 @@ defmodule Mmo.GameServer do
   defp notify_clients(state) do
     world = get_current_world(state)
     :ok = Phoenix.PubSub.broadcast(PubSub, "game", {:update, world})
-    world
   end
 end
