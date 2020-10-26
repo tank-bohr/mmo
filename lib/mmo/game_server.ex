@@ -6,6 +6,8 @@ defmodule Mmo.GameServer do
   alias Mmo.HeroServer
   alias Mmo.HeroesRegistry
 
+  require Logger
+
   @wally %{wall?: true}
   @empty %{wall?: false}
   @grid [
@@ -54,34 +56,32 @@ defmodule Mmo.GameServer do
   def handle_call({:connect, name}, {client, _}, state) do
     {pid, _hero} = find_or_create_hero(name, state)
     HeroServer.increase_counter(pid, client)
-    world = get_current_world(state)
-    :ok = notify_clients(world)
-    {:reply, world, state}
+    {:reply, notify_clients(state), state}
   end
 
   def handle_call({:move, name, direction}, _from, state) do
     {pid, hero} = find_hero(name)
     new_tile = move(hero.tile, direction)
     if tile_available?(new_tile, state), do: HeroServer.update_tile(pid, new_tile)
-    world = get_current_world(state)
-    :ok = notify_clients(world)
-    {:reply, world, state}
+    {:reply, notify_clients(state), state}
   end
 
   def handle_call({:attack, name}, _from, state) do
     {_pid, attacker} = find_hero(name)
     destruction(attacker)
-    world = get_current_world(state)
-    :ok = notify_clients(world)
-    {:reply, world, state}
+    {:reply, notify_clients(state), state}
   end
 
   @impl true
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
-    state
-    |> get_current_world()
-    |> notify_clients()
+    notify_clients(state)
+    {:noreply, state}
+  end
 
+  def handle_info({:revive, pid}, state = %{walkable_tiles: walkable_tiles}) do
+    tile = Enum.random(walkable_tiles)
+    :ok = HeroServer.revive_hero(pid, tile)
+    notify_clients(state)
     {:noreply, state}
   end
 
@@ -140,7 +140,11 @@ defmodule Mmo.GameServer do
       }
     ])
     |> Enum.filter(fn {_pid, hero} -> attack_covers?(hero.tile, attacker.tile) end)
-    |> Enum.each(fn {pid, _hero} -> HeroServer.kill_hero(pid) end)
+    |> Enum.each(fn {pid, hero} ->
+      Logger.debug("Kill #{hero.name}")
+      :ok = HeroServer.kill_hero(pid)
+      Process.send_after(self(), {:revive, pid}, :timer.seconds(5))
+    end)
   end
 
   defp grouped_heroes() do
@@ -185,7 +189,9 @@ defmodule Mmo.GameServer do
       j >= attack_j - 1
   end
 
-  defp notify_clients(world) do
-    Phoenix.PubSub.broadcast(PubSub, "game", {:update, world})
+  defp notify_clients(state) do
+    world = get_current_world(state)
+    :ok = Phoenix.PubSub.broadcast(PubSub, "game", {:update, world})
+    world
   end
 end
