@@ -31,9 +31,9 @@ defmodule MmoWeb.GameLive do
     {:noreply, assign(socket, :world, GameServer.move_hero(socket.assigns.name, :right))}
   end
 
-  def handle_event("action", %{"key" => "Space"}, socket) do
+  def handle_event("action", %{"key" => "Enter"}, socket) do
     Logger.debug("attack")
-    {:noreply, socket}
+    {:noreply, assign(socket, :world, GameServer.attack(socket.assigns.name))}
   end
 
   def handle_event(_event, _params, socket) do

@@ -17,6 +17,10 @@ defmodule Mmo.HeroServer do
     GenServer.call(pid, {:update_tile, tile})
   end
 
+  def kill_hero(pid) do
+    GenServer.call(pid, :kill_hero)
+  end
+
   def increase_counter(pid, client) do
     GenServer.call(pid, {:increase_counter, client})
   end
@@ -28,7 +32,12 @@ defmodule Mmo.HeroServer do
   end
 
   @impl true
-  def handle_call({:update_tile, _tile}, _from, %{hero: %Hero{alive?: false}} = state) do
+  def handle_call({:increase_counter, client}, _from, %{counter: counter} = state) do
+    Process.monitor(client)
+    {:reply, :ok, %{state | counter: counter + 1}}
+  end
+
+  def handle_call(_request, _from, %{hero: %Hero{alive?: false}} = state) do
     {:reply, :ok, state}
   end
 
@@ -41,9 +50,13 @@ defmodule Mmo.HeroServer do
     {:reply, :ok, %{state | hero: hero}}
   end
 
-  def handle_call({:increase_counter, client}, _from, %{counter: counter} = state) do
-    Process.monitor(client)
-    {:reply, :ok, %{state | counter: counter + 1}}
+  def handle_call(:kill_hero, _from, %{hero: %Hero{name: name}} = state) do
+    {_, hero} =
+      Registry.update_value(HeroesRegistry, name, fn prev ->
+        %Hero{prev | alive?: false}
+      end)
+
+    {:reply, :ok, %{state | hero: hero}, :timer.seconds(5)}
   end
 
   @impl true
@@ -55,5 +68,9 @@ defmodule Mmo.HeroServer do
       new_state ->
         {:stop, :normal, new_state}
     end
+  end
+
+  def handle_info(:timeout, state) do
+    {:noreply, state}
   end
 end

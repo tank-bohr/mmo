@@ -5,12 +5,19 @@
         <%= cond do %>
         <% tile.wall? -> %>
           <td class="tile wall" >
-        <% Enum.member?(tile.heroes, @name) -> %>
+        <% Enum.find(tile.heroes, fn hero -> hero.name == @name end) -> %>
           <td class="tile my" >
           <%= @name %>
+        <% dead = Enum.find(tile.heroes, fn hero -> not hero.alive? end) -> %>
+          <td class="tile dead" >
+          <%= dead.name %>
         <% Enum.any?(tile.heroes) -> %>
           <td class="tile empty" >
-          <%= List.first(tile.heroes) %>
+          <%=
+            tile.heroes
+            |> List.first()
+            |> Map.get(:name)
+          %>
         <% true -> %>
           <td class="tile empty" >
         <% end %>

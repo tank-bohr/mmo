@@ -34,6 +34,10 @@ defmodule Mmo.GameServer do
     GenServer.call(__MODULE__, {:move, name, direction})
   end
 
+  def attack(name) do
+    GenServer.call(__MODULE__, {:attack, name})
+  end
+
   @impl true
   def init(_options) do
     walkable_tiles = get_walkable_tiles(@grid)
@@ -59,6 +63,14 @@ defmodule Mmo.GameServer do
     {pid, hero} = find_hero(name)
     new_tile = move(hero.tile, direction)
     if tile_available?(new_tile, state), do: HeroServer.update_tile(pid, new_tile)
+    world = get_current_world(state)
+    :ok = notify_clients(world)
+    {:reply, world, state}
+  end
+
+  def handle_call({:attack, name}, _from, state) do
+    {_pid, attacker} = find_hero(name)
+    destruction(attacker)
     world = get_current_world(state)
     :ok = notify_clients(world)
     {:reply, world, state}
@@ -102,7 +114,7 @@ defmodule Mmo.GameServer do
   end
 
   defp get_current_world(%{grid: grid}) do
-    heroes = Enum.group_by(get_heroes(), fn hero -> hero.tile end, fn hero -> hero.name end)
+    heroes = grouped_heroes()
 
     traverse(grid, fn tile, i, j ->
       case Map.fetch(heroes, {i, j}) do
@@ -115,8 +127,26 @@ defmodule Mmo.GameServer do
     end)
   end
 
-  defp get_heroes() do
-    Registry.select(HeroesRegistry, [{{:_, :_, :"$1"}, [], [:"$1"]}])
+  defp destruction(attacker) do
+    HeroesRegistry
+    |> Registry.select([
+      {
+        {:"$1", :"$2", :"$3"},
+        [
+          {:"=/=", :"$1", attacker.name},
+          {:map_get, :alive?, :"$3"}
+        ],
+        [{{:"$2", :"$3"}}]
+      }
+    ])
+    |> Enum.filter(fn {_pid, hero} -> attack_covers?(hero.tile, attacker.tile) end)
+    |> Enum.each(fn {pid, _hero} -> HeroServer.kill_hero(pid) end)
+  end
+
+  defp grouped_heroes() do
+    HeroesRegistry
+    |> Registry.select([{{:_, :_, :"$1"}, [], [:"$1"]}])
+    |> Enum.group_by(fn hero -> hero.tile end)
   end
 
   defp traverse(grid, f) do
@@ -147,6 +177,13 @@ defmodule Mmo.GameServer do
 
   defp tile_available?({i, j}, _state) when i < 0 or j < 0, do: false
   defp tile_available?(tile, %{walkable_tiles_set: set}), do: MapSet.member?(set, tile)
+
+  defp attack_covers?({i, j}, {attack_i, attack_j}) do
+    i <= attack_i + 1 &&
+      i >= attack_i - 1 &&
+      j <= attack_j + 1 &&
+      j >= attack_j - 1
+  end
 
   defp notify_clients(world) do
     Phoenix.PubSub.broadcast(PubSub, "game", {:update, world})
