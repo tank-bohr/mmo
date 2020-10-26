@@ -89,6 +89,7 @@ defmodule Mmo.GameServerTest do
                |> Enum.find(fn hero -> hero.name == "victim" end)
 
       send(pid, :stop)
+      Process.sleep(500)
       _victim_disconnects = receive_update!()
       assert [] = Registry.lookup(Mmo.HeroesRegistry, "victim")
     end
