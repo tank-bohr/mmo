@@ -48,6 +48,7 @@ defmodule Mmo.HeroServer do
       Registry.update_value(HeroesRegistry, name, fn prev ->
         %Hero{prev | alive?: true, tile: tile}
       end)
+
     {:reply, :ok, %{state | hero: hero}}
   end
 

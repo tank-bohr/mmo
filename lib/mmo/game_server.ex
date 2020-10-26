@@ -27,9 +27,9 @@ defmodule Mmo.GameServer do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def connect(name) do
+  def connect(name, tile \\ :random) do
     Phoenix.PubSub.subscribe(PubSub, "game")
-    GenServer.call(__MODULE__, {:connect, name})
+    GenServer.call(__MODULE__, {:connect, name, tile})
   end
 
   def move_hero(name, direction) do
@@ -53,8 +53,8 @@ defmodule Mmo.GameServer do
   end
 
   @impl true
-  def handle_call({:connect, name}, {client, _}, state) do
-    {pid, _hero} = find_or_create_hero(name, state)
+  def handle_call({:connect, name, tile}, {client, _}, state) do
+    {pid, _hero} = find_or_create_hero(name, tile, state)
     :ok = HeroServer.increase_counter(pid, client)
     {:reply, notify_clients(state), state}
   end
@@ -85,10 +85,10 @@ defmodule Mmo.GameServer do
     {:noreply, state}
   end
 
-  defp find_or_create_hero(name, %{walkable_tiles: walkable_tiles}) do
+  defp find_or_create_hero(name, tile, %{walkable_tiles: walkable_tiles}) do
     case find_hero(name) do
       :not_found ->
-        create_hero(name, walkable_tiles)
+        create_hero(name, tile, walkable_tiles)
 
       found ->
         found
@@ -105,8 +105,13 @@ defmodule Mmo.GameServer do
     end
   end
 
-  defp create_hero(name, walkable_tiles) do
-    tile = Enum.random(walkable_tiles)
+  defp create_hero(name, tile, walkable_tiles) do
+    tile =
+      case tile do
+        :random -> Enum.random(walkable_tiles)
+        {i, j} -> {i, j}
+      end
+
     hero = %Hero{name: name, tile: tile}
     {:ok, pid} = HeroServer.create(hero)
     Process.monitor(pid)
