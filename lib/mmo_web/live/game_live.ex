@@ -8,38 +8,33 @@ defmodule MmoWeb.GameLive do
 
   @impl true
   def mount(params, _session, socket) do
-    name = params["name"] || Superhero.name
+    name = params["name"] || Superhero.name()
     :ok = GameServer.connect(name)
     {:ok, assign(socket, name: name, world: [])}
   end
 
   @impl true
   def handle_event("action", %{"key" => "ArrowUp"}, socket) do
-    Logger.debug("up")
     :ok = GameServer.move_hero(socket.assigns.name, :up)
     {:noreply, socket}
   end
 
   def handle_event("action", %{"key" => "ArrowDown"}, socket) do
-    Logger.debug("down")
     :ok = GameServer.move_hero(socket.assigns.name, :down)
     {:noreply, socket}
   end
 
   def handle_event("action", %{"key" => "ArrowLeft"}, socket) do
-    Logger.debug("left")
     :ok = GameServer.move_hero(socket.assigns.name, :left)
     {:noreply, socket}
   end
 
   def handle_event("action", %{"key" => "ArrowRight"}, socket) do
-    Logger.debug("right")
     :ok = GameServer.move_hero(socket.assigns.name, :right)
     {:noreply, socket}
   end
 
   def handle_event("action", %{"key" => "Enter"}, socket) do
-    Logger.debug("attack")
     :ok = GameServer.attack(socket.assigns.name)
     {:noreply, socket}
   end
