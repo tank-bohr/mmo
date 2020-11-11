@@ -1,6 +1,9 @@
 defmodule Mmo.GameServerTest do
   use ExUnit.Case
 
+  alias Mmo.HeroServer
+  alias Mmo.HeroesRegistry
+
   defp receive_update!(wait \\ 1) do
     receive do
       {:update, world} -> world
@@ -43,7 +46,7 @@ defmodule Mmo.GameServerTest do
         |> Enum.empty?()
       )
 
-      Mmo.GameServer.move_hero(name, :up)
+      :ok = Mmo.GameServer.move_hero(name, :up)
 
       assert [%{name: ^name}] =
                receive_update!()
@@ -54,16 +57,25 @@ defmodule Mmo.GameServerTest do
 
   describe "attack" do
     test "kills neighbor" do
+      parent = self()
+
       pid =
         spawn_link(fn ->
           :ok = Mmo.GameServer.connect("victim", {1, 2})
+
+          send(parent, :ready)
 
           receive do
             :stop -> :ok
           end
         end)
 
-      Process.sleep(500)
+      receive do
+        :ready -> :ok
+      after
+        :timer.seconds(1) ->
+          raise "timeout"
+      end
 
       :ok = Mmo.GameServer.connect("attacker", {2, 2})
 
@@ -92,6 +104,42 @@ defmodule Mmo.GameServerTest do
       Process.sleep(500)
       _victim_disconnects = receive_update!()
       assert [] = Registry.lookup(Mmo.HeroesRegistry, "victim")
+    end
+
+    test "when hero is dead" do
+      parent = self()
+
+      pid =
+        spawn_link(fn ->
+          :ok = Mmo.GameServer.connect("victim", {1, 2})
+          send(parent, :ready)
+
+          receive do
+            :stop -> :ok
+          end
+        end)
+
+      receive do
+        :ready -> :ok
+      after
+        :timer.seconds(1) ->
+          raise "timeout"
+      end
+
+      :ok = Mmo.GameServer.connect("attacker", {2, 2})
+
+      assert Enum.any?(receive_update!())
+
+      [{hero_server, _}] = Registry.lookup(HeroesRegistry, "attacker")
+      :ok = HeroServer.kill_hero(hero_server)
+      :ok = Mmo.GameServer.attack("attacker")
+
+      assert [%{alive?: true}] =
+               receive_update!()
+               |> get_tile({1, 2})
+               |> Map.get(:heroes)
+
+      send(pid, :stop)
     end
   end
 end

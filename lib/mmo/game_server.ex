@@ -132,6 +132,11 @@ defmodule Mmo.GameServer do
     end)
   end
 
+  defp destruction(%Hero{alive?: false}) do
+    # Dead hero cannot attack
+    :ok
+  end
+
   defp destruction(attacker) do
     HeroesRegistry
     |> Registry.select([
